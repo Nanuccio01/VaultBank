@@ -1,0 +1,18 @@
+spring:
+  application:
+    name: vaultbank-backend
+  profiles:
+    default: dev,local
+
+server:
+  port: 8080
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+
+vaultbank:
+  jwt:
+    ttl-min: 30
