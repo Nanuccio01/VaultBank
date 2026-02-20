@@ -1,0 +1,17 @@
+# IDE
+.idea/
+*.iml
+
+# secrets
+.env
+.env.*
+!.env.example
+
+# Java
+/backend/target/
+
+# Node
+/frontend/node_modules/
+/frontend/dist/
+
+backend/src/main/resources/application-local.yml
