@@ -1,3 +1,5 @@
 vaultbank:
   jwt:
     hs256-secret-b64: "a0vis+1HRQj9JiTwUsk/kduPNEROgpsJaPvogcgap1crMAwQKg6vtopho5oakzrb"
+  crypto:
+    aes-key-b64: "tRRZbddIErDb9ybF35AS3MVWpqFihWrB03uwWMEWeXY="

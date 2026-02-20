@@ -24,7 +24,7 @@ public class AuthController {
 
     @PostMapping("/register")
     public ResponseEntity<Void> register(@Valid @RequestBody RegisterRequest req) {
-        authService.register(req.email(), req.password());
+        authService.register(req.email(), req.password(), req.firstName(), req.lastName(), req.phone());
         return ResponseEntity.ok().build();
     }
 

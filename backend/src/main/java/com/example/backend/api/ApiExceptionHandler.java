@@ -25,8 +25,21 @@ public class ApiExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ApiError> illegalArg(IllegalArgumentException ex) {
         String msg = ex.getMessage() == null ? "Bad request" : ex.getMessage();
-        HttpStatus s = "Invalid credentials".equalsIgnoreCase(msg) ? HttpStatus.UNAUTHORIZED : HttpStatus.BAD_REQUEST;
-        return ResponseEntity.status(s).body(new ApiError(Instant.now(), s.value(), s.getReasonPhrase(), msg, List.of()));
+
+        HttpStatus status;
+        // dentro handle IllegalArgumentException / illegalArg
+        if ("Invalid credentials".equalsIgnoreCase(msg)) {
+            status = HttpStatus.UNAUTHORIZED;
+        } else if ("Email already registered".equalsIgnoreCase(msg)) {
+            status = HttpStatus.CONFLICT;
+        } else if ("User not found".equalsIgnoreCase(msg)) {
+            status = HttpStatus.NOT_FOUND;
+        } else if ("Insufficient funds".equalsIgnoreCase(msg)) {
+            status = HttpStatus.BAD_REQUEST;
+        } else {
+            status = HttpStatus.BAD_REQUEST;
+        }
+        return ResponseEntity.status(status).body(new ApiError(Instant.now(), status.value(), status.getReasonPhrase(), msg, List.of()));
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
