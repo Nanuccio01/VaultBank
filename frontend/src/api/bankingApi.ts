@@ -12,6 +12,7 @@ export type MeResp = {
 export type TransferReq = {
     toIban: string;
     amount: number;
+    causal: string;
 };
 
 export type TransferResp = {
@@ -27,6 +28,23 @@ export type TransferItem = {
     createdAt: string;
 };
 
+export type MovementItem = {
+    id: string;
+    direction: "IN" | "OUT";
+    amount: string;
+    causal: string;
+    createdAt: string;
+    senderName: string;
+    senderIban: string;
+    recipientName: string;
+    recipientIban: string;
+};
+
+export async function movements(): Promise<MovementItem[]> {
+    const { data } = await http.get<MovementItem[]>("/api/banking/movements");
+    return data;
+}
+
 export async function me(): Promise<MeResp> {
     const { data } = await http.get<MeResp>("/api/banking/me");
     return data;
@@ -37,7 +55,7 @@ export async function transfer(req: TransferReq): Promise<TransferResp> {
     return data;
 }
 
-export async function latestTransfers(): Promise<TransferItem[]> {
-    const { data } = await http.get<TransferItem[]>("/api/banking/transfers");
+export async function latestTransfers(): Promise<MovementItem[]> {
+    const { data } = await http.get<MovementItem[]>("/api/banking/transfers");
     return data;
 }
