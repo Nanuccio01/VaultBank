@@ -36,6 +36,12 @@ public class UserEntity {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "locked_until")
+    private Instant lockedUntil;
+
+    @Column(name = "lock_reason", length = 200)
+    private String lockReason;
+
     public UserEntity() {}
 
     public static UserEntity create(String email, String passwordHash) {
@@ -66,4 +72,10 @@ public class UserEntity {
 
     public String getIban() { return iban; }
     public void setIban(String iban) { this.iban = iban; }
+
+    public Instant getLockedUntil() { return lockedUntil; }
+    public void setLockedUntil(Instant lockedUntil) { this.lockedUntil = lockedUntil; }
+
+    public String getLockReason() { return lockReason; }
+    public void setLockReason(String lockReason) { this.lockReason = lockReason; }
 }

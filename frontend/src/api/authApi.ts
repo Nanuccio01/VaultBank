@@ -28,3 +28,8 @@ export async function login(req: LoginReq): Promise<TokenResp> {
     const { data } = await http.post<TokenResp>("/api/auth/login", req);
     return data;
 }
+
+export async function stepUp(password: string): Promise<{ accessToken: string }> {
+    const { data } = await http.post("/api/auth/stepup", { password });
+    return data;
+}

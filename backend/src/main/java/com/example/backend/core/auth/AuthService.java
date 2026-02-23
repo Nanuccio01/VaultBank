@@ -67,7 +67,7 @@ public class AuthService {
         Instant now = Instant.now();
         Instant exp = now.plus(ttlMin, ChronoUnit.MINUTES);
 
-        String token = jwtTokenService.issueAccessToken(user.getId().toString(), user.getEmail(), scope, now, exp);
+        String token = jwtTokenService.issueAccessToken(user.getId().toString(), user.getEmail(), scope, now, exp, false);
         long expiresSec = ChronoUnit.SECONDS.between(now, exp);
 
         return new TokenResult(token, expiresSec, scope);

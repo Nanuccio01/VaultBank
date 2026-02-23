@@ -5,10 +5,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
 public interface TransferRepository extends JpaRepository<TransferEntity, UUID> {
+
+    long countByFromUserIdAndCreatedAtAfter(UUID fromUserId, Instant after);
+    boolean existsByFromUserIdAndToIban(UUID fromUserId, String toIban);
 
     @Query("select t from TransferEntity t " +
             "where t.fromUserId = :uid or t.toUserId = :uid " +

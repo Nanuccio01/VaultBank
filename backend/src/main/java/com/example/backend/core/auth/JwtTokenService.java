@@ -20,19 +20,21 @@ public class JwtTokenService {
         this.jwtEncoder = jwtEncoder;
     }
 
-    public String issueAccessToken(String userId, String email, String scope, Instant issuedAt, Instant expiresAt) {
+    public String issueAccessToken(String userId, String email, String scope, Instant issuedAt, Instant expiresAt, boolean stepUp) {
 
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("scope", scope);
-
-        JwtClaimsSet claimsSet = JwtClaimsSet.builder()
+        JwtClaimsSet.Builder b = JwtClaimsSet.builder()
                 .issuer("vaultbank")
-                .subject(email)          // standard: sub
+                .subject(email)
                 .issuedAt(issuedAt)
                 .expiresAt(expiresAt)
-                .claim("uid", userId)    // handy for DB lookup later
-                .claims(c -> c.putAll(claims))
-                .build();
+                .claim("uid", userId)
+                .claim("scope", scope);
+
+        if (stepUp) {
+            b.claim("stepup", true);
+        }
+
+        JwtClaimsSet claimsSet = b.build();
 
         JwsHeader header = JwsHeader.with(MacAlgorithm.HS256).type("JWT").build();
         return jwtEncoder.encode(JwtEncoderParameters.from(header, claimsSet)).getTokenValue();

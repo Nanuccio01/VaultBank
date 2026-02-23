@@ -56,4 +56,34 @@ public class ApiExceptionHandler {
         HttpStatus s = HttpStatus.INTERNAL_SERVER_ERROR;
         return ResponseEntity.status(s).body(new ApiError(Instant.now(), s.value(), s.getReasonPhrase(), "JWT encoding failed", List.of(ex.getMessage())));
     }
+
+    @ExceptionHandler(com.example.backend.api.banking.FraudExceptions.FraudStepUpRequiredException.class)
+    public ResponseEntity<?> stepUp(com.example.backend.api.banking.FraudExceptions.FraudStepUpRequiredException ex) {
+        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(
+                java.util.Map.of(
+                        "code", "FRAUD_STEPUP_REQUIRED",
+                        "message", ex.getMessage(),
+                        "reasons", ex.getReasons()
+                )
+        );
+    }
+
+    @ExceptionHandler(com.example.backend.api.banking.FraudExceptions.FraudBlockedException.class)
+    public ResponseEntity<?> blocked(com.example.backend.api.banking.FraudExceptions.FraudBlockedException ex) {
+        long retry = 0;
+        if (ex.getLockedUntil() != null) {
+            retry = java.time.Duration.between(java.time.Instant.now(), ex.getLockedUntil()).getSeconds();
+            if (retry < 0) retry = 0;
+        }
+
+        return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                .header("Retry-After", String.valueOf(retry))
+                .body(java.util.Map.of(
+                        "code", "FRAUD_BLOCKED",
+                        "message", ex.getMessage(),
+                        "reasons", ex.getReasons(),
+                        "lockedUntil", ex.getLockedUntil() == null ? null : ex.getLockedUntil().toString(),
+                        "retryAfterSeconds", retry
+                ));
+    }
 }

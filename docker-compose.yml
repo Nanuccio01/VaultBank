@@ -27,6 +27,7 @@ services:
       SPRING_DATASOURCE_PASSWORD: ${POSTGRES_PASSWORD}
       vaultbank.jwt.hs256-secret-b64: ${SBANK_JWT_HS256_SECRET_B64}
       vaultbank.crypto.aes-key-b64: ${SBANK_AES_KEY_B64}
+      VAULTBANK_FRAUD_LOCK_SECONDS: ${VAULTBANK_FRAUD_LOCK_SECONDS}
     ports:
       - "${BACKEND_PORT}:8080"
     depends_on:

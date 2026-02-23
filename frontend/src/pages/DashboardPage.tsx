@@ -6,6 +6,8 @@ import { useNavigate } from "react-router-dom";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { stepUp } from "../api/authApi";
+import { setToken } from "../auth/token";
 
 const transferSchema = z.object({
     toIban: z
@@ -42,6 +44,8 @@ export function DashboardPage() {
     const [loading, setLoading] = useState(true);
     const [meData, setMeData] = useState<MeData | null>(null);
     const [items, setItems] = useState<MovementItem[]>([]);
+    const [lockUntilMs, setLockUntilMs] = useState<number | null>(null);
+    const [lockRemainingSec, setLockRemainingSec] = useState<number>(0);
 
     const {
         register,
@@ -76,29 +80,143 @@ export function DashboardPage() {
         load();
     }, []);
 
+    useEffect(() => {
+        if (!lockUntilMs) return;
+
+        const tick = () => {
+            const diff = lockUntilMs - Date.now();
+            if (diff <= 0) {
+                setLockUntilMs(null);
+                setLockRemainingSec(0);
+                toast.success("Blocco antifrode scaduto. Puoi riprovare.");
+                return;
+            }
+            setLockRemainingSec(Math.ceil(diff / 1000));
+        };
+
+        tick();
+        const id = window.setInterval(tick, 500);
+        return () => window.clearInterval(id);
+    }, [lockUntilMs]);
+
     const fullName = useMemo(() => {
         if (!meData) return "";
         return `${meData.firstName ?? ""} ${meData.lastName ?? ""}`.trim();
     }, [meData]);
 
     async function onTransfer(values: TransferForm) {
-        try {
-            const resp = await transfer({
+        // blocco locale: non chiamare nemmeno il backend finché sei lockato
+        if (lockUntilMs && Date.now() < lockUntilMs) {
+            toast.error(`Operation blocked. Please try again in ${formatCountdown(lockRemainingSec)}.`);
+            return;
+        }
+
+        // helper: applica lock dal payload antifrode
+        const applyLockFromResponse = (data: any) => {
+            const retry = Number(data?.retryAfterSeconds ?? 0);
+            if (retry > 0) {
+                setLockUntilMs(Date.now() + retry * 1000);
+                toast.error(`Antifraud: Please try again in ${formatCountdown(retry)}.`);
+            } else {
+                // fallback se manca retryAfterSeconds
+                setLockUntilMs(Date.now() + 60 * 1000);
+                toast.error("Antifraud: Operation temporaly blocked.");
+            }
+        };
+
+        // helper: esegue la chiamata transfer (Bearer preso da localStorage via interceptor)
+        const doTransfer = async () => {
+            return await transfer({
                 toIban: values.toIban,
                 amount: values.amount,
                 causal: values.causal ?? "",
             });
+        };
 
-            toast.success(
-                `Transfer executed. New balance: € ${formatMoney((resp as any).newBalance)}`
-            );
-
+        try {
+            const resp = await doTransfer();
+            toast.success(`Transfer executed. New balance: € ${formatMoney((resp as any).newBalance)}`);
             reset({ toIban: "", amount: 0.01, causal: "" });
             await load();
+            return;
         } catch (e: any) {
+            const status = e?.response?.status;
             const data = e?.response?.data;
+
+            // 1) LOCK antifrode (countdown)
+            if (status === 403 && data?.code === "FRAUD_BLOCKED") {
+                applyLockFromResponse(data);
+                return;
+            }
+
+            // 2) STEP-UP required: chiedi password, chiama /stepup, salva token, ritenta una sola volta
+            if (status === 403 && data?.code === "FRAUD_STEPUP_REQUIRED") {
+                const reasons = Array.isArray(data?.reasons) ? data.reasons.join(", ") : "";
+                const pwd = window.prompt(
+                    reasons
+                        ? `Suspicious Operations (${reasons}). Insert your password to continue:`
+                        : "Suspicious Operations. Insert your password to continue:"
+                );
+                if (!pwd) return;
+
+                try {
+                    const su = await stepUp(pwd);
+                    setToken(su.accessToken);
+                } catch (stepErr: any) {
+                const st = stepErr?.response?.status;
+                const d = stepErr?.response?.data;
+
+                if (st === 403 && d?.code === "FRAUD_BLOCKED") {
+                    const retry = Number(d?.retryAfterSeconds ?? 0);
+                    setLockUntilMs(Date.now() + Math.max(0, retry) * 1000);
+                    toast.error(`Antifraud Alert!`);
+                    return;
+                }
+
+                if (st === 401) {
+                    toast.error("Wrong Password. Retry.");
+                    return;
+                }
+
+                toast.error(d?.message || "Step-up failed");
+                return;
+            }
+
+                // retry transfer (una sola volta)
+                try {
+                    const resp2 = await doTransfer();
+                    toast.success(`Transfer executed. New balance: € ${formatMoney((resp2 as any).newBalance)}`);
+                    reset({ toIban: "", amount: 0.01, causal: "" });
+                    await load();
+                    return;
+                } catch (retryErr: any) {
+                    const st2 = retryErr?.response?.status;
+                    const d2 = retryErr?.response?.data;
+
+                    if (st2 === 403 && d2?.code === "FRAUD_BLOCKED") {
+                        applyLockFromResponse(d2);
+                        return;
+                    }
+                    if (st2 === 403 && d2?.code === "FRAUD_STEPUP_REQUIRED") {
+                        toast.error("Confirmation required again. Please wait a few seconds and try again.");
+                        return;
+                    }
+                    toast.error(d2?.message || "Transaction failed");
+                    return;
+                }
+            }
+
+            // 3) token scaduto / non valido
+            if (status === 401) {
+                toast.error("Session expired. Please log in again.");
+                clearToken();
+                nav("/login");
+                return;
+            }
+
+            // 4) Fallback generico
             const details = Array.isArray(data?.details) ? data.details.join(" | ") : "";
-            toast.error(details ? `${data.message}: ${details}` : (data?.message || "Transfer failed"));
+            toast.error(details ? `${data?.message}: ${details}` : (data?.message || "Transfer failed"));
         }
     }
 
@@ -207,8 +325,13 @@ export function DashboardPage() {
                                         )}
                                     </div>
 
+                                    {lockUntilMs && (
+                                        <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-sm text-rose-200">
+                                            Antifrode attivo: riprova tra <span className="font-mono">{formatCountdown(lockRemainingSec)}</span>
+                                        </div>
+                                    )}
                                     <button
-                                        disabled={isSubmitting}
+                                        disabled={isSubmitting || (lockUntilMs !== null && Date.now() < lockUntilMs)}
                                         className="w-full rounded-xl bg-white text-slate-900 font-semibold py-2.5 hover:bg-slate-100 disabled:opacity-60"
                                     >
                                         {isSubmitting ? "Sending..." : "Send transfer"}
@@ -354,4 +477,11 @@ async function copyText(text: string) {
     } catch {
         toast.error("Copia non riuscita");
     }
+}
+
+function formatCountdown(sec: number) {
+    const s = Math.max(0, sec);
+    const mm = String(Math.floor(s / 60)).padStart(2, "0");
+    const ss = String(s % 60).padStart(2, "0");
+    return `${mm}:${ss}`;
 }
