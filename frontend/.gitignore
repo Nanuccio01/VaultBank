@@ -22,3 +22,6 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+/frontend/certs/*.key
+/frontend/certs/*.crt
