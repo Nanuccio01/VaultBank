@@ -2,6 +2,8 @@
 
 This section explains how to run the project locally using Docker Compose, including HTTPS termination via Nginx (self-signed certificate).
 
+---
+
 ## 0) Prerequisites
 
 #### 1) Docker Desktop (Windows):
@@ -103,6 +105,8 @@ Full reset (delete database volume and all data):
 docker compose down -v
 ```
 
+---
+
 ## 1) Tech Stack Overview
 
 This project is a minimal full-stack “secure banking demo” designed for a live university demo. It is built as a **single backend** + **single frontend** + **PostgreSQL**, fully containerized with Docker Compose.
@@ -187,8 +191,144 @@ This project is a minimal full-stack “secure banking demo” designed for a li
 
 ---
 
+## 3) Architecture schema
+![Architecture](images/Schema.png)
 
-## 4) Antifraud Module (Behavioral Detection + Step-Up + Auto-Unlock)
+---
+
+## 4) Security Tests
+
+## Security Tests (Try it yourself)
+
+Below are simple security-oriented tests that you can run locally to validate the main protections implemented by the project.
+You can also tests all the following tests manually using the UI.
+
+> Notes:
+> - Replace placeholders like `<TOKEN>` with real values.
+> - When testing HTTPS locally with self-signed cert, use `-k` with `curl.exe`.
+
+---
+
+### 1) Input validation (server-side)
+
+**1.1 Invalid email (register)**
+Expected: **400 Bad Request** with validation details.
+
+```powershell
+$body = @{ firstName="A"; lastName="B"; email="not-an-email"; phone="+39 333 1234567"; password="Password123!" } | ConvertTo-Json
+Invoke-RestMethod -Method POST -Uri "http://localhost:8080/api/auth/register" -ContentType "application/json" -Body $body
+```
+
+**1.2 Invalid IBAN format (transfer)**
+Expected: **400 Bad Request** (IBAN regex validation).
+
+```powershell
+$tr = @{ toIban="INVALID_IBAN"; amount=10.00; causal="" } | ConvertTo-Json
+Invoke-RestMethod -Method POST -Uri "http://localhost:8080/api/banking/transfer" -ContentType "application/json" -Headers @{ Authorization="Bearer <TOKEN>" } -Body $tr
+```
+
+**1.3 Invalid amount (negative / too small)**
+Expected: **400 Bad Request**.
+
+```powershell
+$tr = @{ toIban="IT12A1234512345123451234567"; amount=-1.00; causal="" } | ConvertTo-Json
+Invoke-RestMethod -Method POST -Uri "http://localhost:8080/api/banking/transfer" -ContentType "application/json" -Headers @{ Authorization="Bearer <TOKEN>" } -Body $tr
+```
+
+---
+
+### 2) Authentication & Authorization
+
+**2.1 Access protected endpoint without token**
+Expected: **400 Bad Request**.
+
+```powershell
+curl.exe -i http://localhost:8080/api/banking/me
+```
+
+**2.2 Access protected endpoint with malformed token**
+Expected: **401 Unauthorized**.
+
+```powershell
+curl.exe -i http://localhost:8080/api/banking/me -H "Authorization: Bearer abc.def.ghi"
+```
+
+**2.3 Token required: logout behavior**
+
+Logout is client-side (token removal). After logout:
+- open Dashboard → should redirect to /login
+- API calls without token → 401
+
+---
+
+### 3) Password security (hashing)
+
+Passwords are stored as BCrypt hashes (never plaintext).
+How to verify quickly (DB-level check):
+
+- connect to Postgres container and inspect users.password_hash
+
+- expected: strings starting with $2a$ / $2b$ (BCrypt format)
+
+```powershell
+docker compose exec postgres psql -U vaultbank -d vaultbank -c "select email, password_hash from users limit 5;"
+```
+
+---
+
+### 4) Data-at-rest encryption (PII + balance)
+
+PII and balance are stored encrypted using AES-GCM.
+Expected:
+
+- first_name_enc, last_name_enc, phone_enc, balance_enc contain non-human-readable ciphertext.
+- API /api/banking/me returns decrypted values.
+
+DB check:
+```powershell
+docker compose exec postgres psql -U vaultbank -d vaultbank -c "select email, first_name_enc, balance_enc from users limit 3;"
+```
+
+API check:
+```powershell
+curl.exe -i http://localhost:8080/api/banking/me -H "Authorization: Bearer <TOKEN>"
+```
+
+---
+
+### 5) SQL Injection resistance (ORM parameter binding)
+
+The backend uses Spring Data JPA with parameter binding (no SQL string concatenation).
+A simple test is trying classic SQLi strings in the login email field.
+
+Expected: login fails normally (401) and database is unaffected.
+```powershell
+$login = @{ email="a@test.it' OR '1'='1"; password="whatever" } | ConvertTo-Json
+try {
+Invoke-RestMethod -Method POST -Uri "http://localhost:8080/api/auth/login" -ContentType "application/json" -Body $login
+} catch {
+"Expected failure (not injected)."
+}
+```
+
+---
+
+### 6) XSS safety in UI (React escaping)
+
+The UI renders user-controlled strings (like causal) as plain text; React escapes content by default.
+Test by inserting HTML-like payload as causal:
+
+Expected: it is displayed as text, not executed.
+
+Example causal:
+```plaintext
+<script>alert('xss')</script>
+```
+(Use the transfer form in the UI and then check “Last Transfers”.)
+
+---
+
+## 5) Antifraud Module (Behavioral Detection + Step-Up + Auto-Unlock)
 
 The antifraud module is executed **before every transfer** (`POST /api/banking/transfer`) to detect anomalous behavior and reduce fraud risk.  
 It implements a pragmatic flow suitable for a live demo:
