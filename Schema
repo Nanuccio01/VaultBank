@@ -1,0 +1,45 @@
+                             (HTTPS/TLS)
++-------------------+   https://localhost:8443    +--------------------------+
+|      Browser      | --------------------------> |  Frontend container      |
+|  React SPA (UI)   |                             |  Nginx (TLS termination) |
+|                   | <-------------------------- |  + static /dist          |
++-------------------+        HTML/CSS/JS          |  + reverse proxy /api    |
+                                                  +-------------+------------+
+                                                                |
+                                                                |  HTTP (Docker network)
+                                                                v
+                                                 +--------------------------+
+                                                 |  Backend container       |
+                                                 |  Spring Boot (REST API)  |
+                                                 |--------------------------|
+                                                 | Spring Security          |
+                                                 | - OAuth2 Resource Server |
+                                                 | - JWT validation (HS256) |
+                                                 |--------------------------|
+                                                 | Auth module              |
+                                                 | - /auth/register         |
+                                                 | - /auth/login (JWT)      |
+                                                 | - /auth/stepup (JWT*)    |
+                                                 |--------------------------|
+                                                 | Banking module           |
+                                                 | - /banking/me            |
+                                                 | - /banking/transfer      |
+                                                 | - /banking/movements     |
+                                                 |--------------------------|
+                                                 | Antifraud + RateLimiter  |
+                                                 | - step-up required       |
+                                                 | - temporary lock timer   |
+                                                 | - resilience4j 429       |
+                                                 |--------------------------|
+                                                 | Crypto at-rest           |
+                                                 | - BCrypt password hash   |
+                                                 | - AES-GCM PII + balance  |
+                                                 +-------------+------------+
+                                                               |
+                                                               | JDBC
+                                                               v
+                                                 +--------------------------+
+                                                 |   PostgreSQL container   |
+                                                 |   tables: users,         |
+                                                 |           transfers      |
+                                                 +--------------------------+
