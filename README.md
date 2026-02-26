@@ -196,9 +196,7 @@ This project is a minimal full-stack “secure banking demo” designed for a li
 
 ---
 
-## 4) Security Tests
-
-## Security Tests (Try it yourself)
+## 4) Security Tests (Try it yourself)
 
 Below are simple security-oriented tests that you can run locally to validate the main protections implemented by the project.
 You can also tests all the following tests manually using the UI.
