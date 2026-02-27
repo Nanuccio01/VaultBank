@@ -1,12 +1,14 @@
 # Installation / Quick Start
 
-This section explains how to run the project locally using Docker Compose, including HTTPS termination via Nginx (self-signed certificate).
+This section explai ns how to run the project locally using Docker Compose, including HTTPS termination via Nginx (self-signed certificate).
 
 ---
 
 ## 0) Prerequisites
 
-#### 1) Docker Desktop (Windows):
+#### 1) Docker Desktop (Windows): 
+
+Download and install Docker Desktop: https://www.docker.com/products/docker-desktop/
 
 Verify Docker is running:
 

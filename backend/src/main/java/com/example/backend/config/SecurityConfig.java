@@ -22,7 +22,6 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain bankingChain(HttpSecurity http) throws Exception {
         http
-                // Apply this chain only to /api/banking/**
                 .securityMatcher("/api/banking/**", "/api/auth/stepup")
 
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

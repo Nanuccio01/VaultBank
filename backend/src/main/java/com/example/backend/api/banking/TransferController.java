@@ -74,7 +74,7 @@ public class TransferController {
             throw new FraudExceptions.FraudStepUpRequiredException(decision.reasons());
         }
 
-        // 2) Esegui bonifico (dopo step-up oppure se ALLOW)
+        // 2) Esegui bonifico
         BankingService.TransferResult result =
                 bankingService.transfer(uid, req.toIban(), req.amount(), req.causal());
 
