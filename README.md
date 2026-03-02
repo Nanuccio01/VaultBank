@@ -1,6 +1,10 @@
-# Installation / Quick Start
+# VaultBank
 
-This section explains how to run the project locally using Docker Compose, including HTTPS termination via Nginx (self-signed certificate).
+Secure Web Banking Application is a full-stack project that simulates an online banking platform with a strong focus on security and clean architecture.
+
+The backend is built with Spring Boot, exposes REST APIs protected by JWT (HS256) and configured as an OAuth2 Resource Server, and uses Spring Data JPA for persistence. The frontend is a React + Vite SPA with secure authentication handling via Axios interceptors.
+
+The application is fully dockerized, with Nginx serving the built SPA, terminating HTTPS, and reverse proxying API requests to the backend.
 
 ---
 

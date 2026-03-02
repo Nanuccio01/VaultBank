@@ -315,7 +315,7 @@ export function DashboardPage() {
                                         </label>
                                         <input
                                             className="input mt-1"
-                                            placeholder="Es. Affitto Febbraio"
+                                            placeholder="Example: Yesterday Dinner"
                                             {...register("causal")}
                                         />
                                         {errors.causal?.message && (
@@ -327,7 +327,7 @@ export function DashboardPage() {
 
                                     {lockUntilMs && (
                                         <div className="rounded-xl border border-rose-400/20 bg-rose-400/10 p-3 text-sm text-rose-200">
-                                            Antifrode attivo: riprova tra <span className="font-mono">{formatCountdown(lockRemainingSec)}</span>
+                                            Antifraud active: retry in <span className="font-mono">{formatCountdown(lockRemainingSec)}</span>
                                         </div>
                                     )}
                                     <button
@@ -376,7 +376,7 @@ export function DashboardPage() {
                                                                 <div className="text-sm font-semibold truncate">
                                                                     {m.causal && String(m.causal).trim().length
                                                                         ? m.causal
-                                                                        : "Bonifico"}
+                                                                        : "Bank Transfer"}
                                                                 </div>
                                                             </div>
 
@@ -473,9 +473,9 @@ async function copyText(text: string) {
     if (!text) return;
     try {
         await navigator.clipboard.writeText(text);
-        toast.success("IBAN copiato");
+        toast.success("IBAN Copied");
     } catch {
-        toast.error("Copia non riuscita");
+        toast.error("Copy not available");
     }
 }
 
