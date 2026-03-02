@@ -1,6 +1,6 @@
 # Installation / Quick Start
 
-This section explai ns how to run the project locally using Docker Compose, including HTTPS termination via Nginx (self-signed certificate).
+This section explains how to run the project locally using Docker Compose, including HTTPS termination via Nginx (self-signed certificate).
 
 ---
 
@@ -335,7 +335,7 @@ It implements a pragmatic flow suitable for a live demo:
 
 - **Normal transfers** → allowed immediately
 - **Suspicious transfers** → require **Step-Up Authentication** (re-enter password)
-- **Repeated Step-Up failures** → temporary lock (auto-unlock after a timer)
+- **Step-Up failures** → temporary lock (auto-unlock after a timer)
 
 #### 1) What it analyzes (rules)
 The antifraud engine evaluates a risk score using simple behavioral signals:
